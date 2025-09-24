@@ -1,4 +1,4 @@
-merkel science api key - E1OL12W4RCR251BNAM1PVR2ZRMLHDHV8SLTLY03UAW
+
 
 
 Create or retrieve the risk assessment for an address
@@ -7,7 +7,7 @@ Create or retrieve the risk assessment for an address
 curl --request POST \
      --url https://api.merklescience.com/api/v4.2/addresses/ \
      --header 'Content-Type: application/json' \
-     --header 'X-API-KEY: E1OL12W4RCR251BNAM1PVR2ZRMLHDHV8SLTLY03UAW' \
+     --header 'X-API-KEY: process.env.MERKLESCIENCE_API_KEY' \
      --header 'accept: application/json' \
      --data '
 {

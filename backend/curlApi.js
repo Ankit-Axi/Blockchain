@@ -1,45 +1,106 @@
 const express = require("express");
 const { readFileSync } = require("fs");
-const cors = require("cors"); 
-const {
-  Fireblocks,
-  BasePath,
-  TransferPeerPathType,
-} = require("@fireblocks/ts-sdk");
+const cors = require("cors");
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const { exec } = require("child_process");
+const { promisify } = require("util");
 const dotenv = require("dotenv");
 dotenv.config();
+
+const execAsync = promisify(exec);
 
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const apiKey =
-  process.env.FIREBLOCKS_API_KEY;
-const secretKeyPath =
-  process.env.FIREBLOCKS_SECRET_KEY_PATH;
-const basePath =
-  process.env.FIREBLOCKS_ENV === "production"
-    ? BasePath.Production
-    : BasePath.Sandbox;
+const apiKey = process.env.FIREBLOCKS_API_KEY;
+const secretKeyPath = process.env.FIREBLOCKS_SECRET_KEY_PATH;
+const baseUrl = process.env.FIREBLOCKS_ENV === "production" 
+  ? "https://api.fireblocks.io" 
+  : "https://sandbox-api.fireblocks.io";
 
-let fireblocks;
+let secretKey;
 
 try {
-  const secretKey = readFileSync(secretKeyPath, "utf8");
-  fireblocks = new Fireblocks({
-    apiKey,
-    secretKey,
-    basePath,
-  });
-  console.log(`Fireblocks initialized with basePath: ${basePath}`);
+  secretKey = readFileSync(secretKeyPath, "utf8");
+  console.log(`Fireblocks API initialized with baseUrl: ${baseUrl}`);
 } catch (error) {
-  console.error("Failed to initialize Fireblocks:", error.message);
+  console.error("Failed to read secret key:", error.message);
   process.exit(1);
 }
 
+// JWT signature generation for Fireblocks API
+function generateJWT(path, bodyJson = "") {
+  const nonce = crypto.randomBytes(16).toString("base64");
+  const timestamp = Math.floor(Date.now() / 1000);
+  const token = {
+    uri: path,
+    nonce: nonce,
+    iat: timestamp,
+    exp: timestamp + 55, // 55 seconds expiry
+    sub: apiKey,
+    bodyHash: crypto.createHash("sha256").update(bodyJson).digest("hex")
+  };
+
+  return jwt.sign(token, secretKey, { algorithm: "RS256" });
+}
+
+// Escape shell arguments to prevent injection
+function escapeShellArg(arg) {
+  return "'" + arg.replace(/'/g, "'\"'\"'") + "'";
+}
+
+// Generic curl request function
+async function makeCurlRequest(method, path, data = null) {
+  const bodyJson = data ? JSON.stringify(data) : "";
+  const token = generateJWT(path, bodyJson);
+  const url = `${baseUrl}${path}`;
+  
+  let curlCommand = `curl -s -X ${method}`;
+  curlCommand += ` -H ${escapeShellArg(`Authorization: Bearer ${token}`)}`;
+  curlCommand += ` -H ${escapeShellArg(`X-API-Key: ${apiKey}`)}`;
+  curlCommand += ` -H ${escapeShellArg('Content-Type: application/json')}`;
+  
+  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    curlCommand += ` -d ${escapeShellArg(bodyJson)}`;
+  }
+  
+  curlCommand += ` ${escapeShellArg(url)}`;
+
+  try {
+    const { stdout, stderr } = await execAsync(curlCommand);
+    
+    if (stderr) {
+      console.error(`Curl stderr: ${stderr}`);
+    }
+    
+    if (!stdout.trim()) {
+      throw new Error('Empty response from API');
+    }
+    
+    const response = JSON.parse(stdout);
+    
+    // Check if response contains error
+    if (response.message && response.code) {
+      throw new Error(`API Error: ${response.message} (Code: ${response.code})`);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error(`Curl Error: ${method} ${path}`, error.message);
+    
+    if (error.message.includes('Unexpected token')) {
+      throw new Error('Invalid JSON response from API');
+    }
+    
+    throw error;
+  }
+}
+
 app.get("/health", (req, res) => {
-  res.json({ status: "OK", basePath, timestamp: new Date().toISOString() });
+  res.json({ status: "OK", baseUrl, timestamp: new Date().toISOString() });
 });
 
 app.post("/vault/create", async (req, res) => {
@@ -50,17 +111,15 @@ app.post("/vault/create", async (req, res) => {
       return res.status(400).json({ error: "Name is required" });
     }
 
-    const vaultAccount = await fireblocks.vaults.createVaultAccount({
-      createVaultAccountRequest: {
-        name,
-        autoFuel,
-        hiddenOnUI,
-      },
+    const data = await makeCurlRequest("POST", "/v1/vault/accounts", {
+      name,
+      autoFuel,
+      hiddenOnUI,
     });
 
     res.json({
       success: true,
-      data: vaultAccount.data,
+      data,
     });
   } catch (error) {
     console.error("Error creating vault account:", error);
@@ -73,10 +132,11 @@ app.post("/vault/create", async (req, res) => {
 
 app.get("/vault/accounts", async (req, res) => {
   try {
-    const vaultAccounts = await fireblocks.vaults.getPagedVaultAccounts("20");
+    const data = await makeCurlRequest("GET", "/v1/vault/accounts_paged?limit=20");
+    
     res.json({
       success: true,
-      data: vaultAccounts.data,
+      data,
     });
   } catch (error) {
     console.error("Error fetching vault accounts:", error);
@@ -91,11 +151,11 @@ app.get("/vault/accounts/:vaultAccountId", async (req, res) => {
   try {
     const { vaultAccountId } = req.params;
 
-    const vaultAccount = await fireblocks.vaults.getVaultAccount({vaultAccountId});
+    const data = await makeCurlRequest("GET", `/v1/vault/accounts/${vaultAccountId}`);
 
     res.json({
       success: true,
-      data: vaultAccount.data,
+      data,
     });
   } catch (error) {
     console.error("Error fetching vault account:", error);
@@ -115,14 +175,11 @@ app.post("/vault/:vaultAccountId/wallet", async (req, res) => {
       return res.status(400).json({ error: "assetId is required" });
     }
 
-    const vaultWallet = await fireblocks.vaults.createVaultAccountAsset({
-      vaultAccountId,
-      assetId,
-    });
+    const data = await makeCurlRequest("POST", `/v1/vault/accounts/${vaultAccountId}/${assetId}`);
 
     res.json({
       success: true,
-      data: vaultWallet.data,
+      data,
     });
   } catch (error) {
     console.error("Error creating wallet:", error);
@@ -137,13 +194,11 @@ app.get("/vault/:vaultAccountId/assets", async (req, res) => {
   try {
     const { vaultAccountId } = req.params;
 
-    const assets = await fireblocks.vaults.getVaultAccountAssets({
-      vaultAccountId,
-    });
+    const data = await makeCurlRequest("GET", `/v1/vault/accounts/${vaultAccountId}`);
 
     res.json({
       success: true,
-      data: assets.data,
+      data,
     });
   } catch (error) {
     console.error("Error fetching vault assets:", error);
@@ -176,7 +231,7 @@ app.post("/transactions/create", async (req, res) => {
       assetId,
       amount,
       source: {
-        type: TransferPeerPathType.VaultAccount,
+        type: "VAULT_ACCOUNT",
         id: sourceVaultId.toString(),
       },
       note: note || `Transaction created at ${new Date().toISOString()}`,
@@ -184,12 +239,12 @@ app.post("/transactions/create", async (req, res) => {
 
     if (destinationType === "vault" && destinationVaultId) {
       transactionPayload.destination = {
-        type: TransferPeerPathType.VaultAccount,
+        type: "VAULT_ACCOUNT",
         id: destinationVaultId.toString(),
       };
     } else if (destinationType === "address" && destinationAddress) {
       transactionPayload.destination = {
-        type: TransferPeerPathType.OneTimeAddress,
+        type: "ONE_TIME_ADDRESS",
         oneTimeAddress: {
           address: destinationAddress,
         },
@@ -201,15 +256,11 @@ app.post("/transactions/create", async (req, res) => {
       });
     }
 
-    const transactionResponse = await fireblocks.transactions.createTransaction(
-      {
-        transactionRequest: transactionPayload,
-      }
-    );
+    const data = await makeCurlRequest("POST", "/v1/transactions", transactionPayload);
 
     res.json({
       success: true,
-      data: transactionResponse.data,
+      data,
     });
   } catch (error) {
     console.error("Error creating transaction:", error);
@@ -224,13 +275,11 @@ app.get("/transactions/:transactionId", async (req, res) => {
   try {
     const { transactionId } = req.params;
 
-    const transaction = await fireblocks.transactions.getTransaction({
-      txId: transactionId,
-    });
+    const data = await makeCurlRequest("GET", `/v1/transactions/${transactionId}`);
 
     res.json({
       success: true,
-      data: transaction.data,
+      data,
     });
   } catch (error) {
     console.error("Error fetching transaction:", error);
@@ -245,16 +294,16 @@ app.get("/transactions", async (req, res) => {
   try {
     const { limit = 10, before, after, status } = req.query;
 
-    const params = { limit: parseInt(limit) };
-    if (before) params.before = before;
-    if (after) params.after = after;
-    if (status) params.status = status;
+    let queryParams = `?limit=${limit}`;
+    if (before) queryParams += `&before=${before}`;
+    if (after) queryParams += `&after=${after}`;
+    if (status) queryParams += `&status=${status}`;
 
-    const transactions = await fireblocks.transactions.getTransactions(params);
+    const data = await makeCurlRequest("GET", `/v1/transactions${queryParams}`);
 
     res.json({
       success: true,
-      data: transactions.data,
+      data,
     });
   } catch (error) {
     console.error("Error fetching transactions:", error);
@@ -267,17 +316,53 @@ app.get("/transactions", async (req, res) => {
 
 app.get("/assets", async (req, res) => {
   try {
-    const assets = await fireblocks.supportedAssets.getSupportedAssets();
+    const data = await makeCurlRequest("GET", "/v1/supported_assets");
 
     res.json({
       success: true,
-      data: assets.data,
+      data,
     });
   } catch (error) {
     console.error("Error fetching supported assets:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Failed to fetch supported assets",
+    });
+  }
+});
+
+// Debug endpoint to show what curl command would be executed
+app.post("/debug/curl", async (req, res) => {
+  try {
+    const { method = "GET", path = "/v1/vault/accounts", data = null } = req.body;
+    
+    const bodyJson = data ? JSON.stringify(data) : "";
+    const token = generateJWT(path, bodyJson);
+    const url = `${baseUrl}${path}`;
+    
+    let curlCommand = `curl -s -X ${method}`;
+    curlCommand += ` -H ${escapeShellArg(`Authorization: Bearer ${token}`)}`;
+    curlCommand += ` -H ${escapeShellArg(`X-API-Key: ${apiKey}`)}`;
+    curlCommand += ` -H ${escapeShellArg('Content-Type: application/json')}`;
+    
+    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+      curlCommand += ` -d ${escapeShellArg(bodyJson)}`;
+    }
+    
+    curlCommand += ` ${escapeShellArg(url)}`;
+
+    res.json({
+      success: true,
+      curlCommand,
+      tokenPreview: token.substring(0, 50) + "...",
+      url,
+      method,
+      path
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
