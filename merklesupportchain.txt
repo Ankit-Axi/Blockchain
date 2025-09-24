@@ -1,0 +1,162 @@
+merkel science api key - E1OL12W4RCR251BNAM1PVR2ZRMLHDHV8SLTLY03UAW
+
+
+Create or retrieve the risk assessment for an address
+
+
+curl --request POST \
+     --url https://api.merklescience.com/api/v4.2/addresses/ \
+     --header 'Content-Type: application/json' \
+     --header 'X-API-KEY: E1OL12W4RCR251BNAM1PVR2ZRMLHDHV8SLTLY03UAW' \
+     --header 'accept: application/json' \
+     --data '
+{
+  "identifier": "0x3c905aC275240085FD295E8c493BF9A8aFE4cE75",
+  "blockchain": "1"
+}
+'
+
+
+
+ 
+Risk Levels
+Please use the following table to map risk_level to risk_level_verbose
+ 
+Risk Level	Risk Level Verbose
+0		No Risk Detected
+1		Info
+2		Caution
+3		Medium
+4		High
+5		Critical
+ 
+ 
+
+
+
+
+Blockchain	Blockchain Code	Coverage type
+
+Bitcoin	        0		Full Coverage
+Ethereum	1		Full Coverage
+Litecoin	2		Full Coverage
+Bitcoin Cash	3		Full Coverage
+Ripple		4		Full Coverage
+Dogecoin	6		Full Coverage
+Zilliqa		7		Full Coverage
+BSC  		8		Full Coverage
+Polygon		9		Full Coverage
+Tron		10		Full Coverage
+Cardano		11		Full Coverage
+Polkadot	12		Full Coverage
+Stellar		13		Full Coverage
+Hedera		14		Full Coverage
+Cronos		15		Full Coverage
+Optimism	16		Full Coverage
+Arbitrum	17		Full Coverage
+Fantom		18		Lite Coverage
+Monero		19		Lite Coverage
+Cosmos		20		Lite Coverage
+Zcash		21		Lite Coverage
+Ethereum c	22		Lite Coverage
+Dash		23		Lite Coverage
+Solana		24		Full Coverage
+Avalanche C	25		Full Coverage
+Verge		26		Lite Coverage
+Bitcoin Gold	27		Lite Coverage
+Algorand	28		Lite Coverage
+Acala		29		Lite Coverage
+Akash		30		Lite Coverage
+Arweave		31		Lite Coverage
+Ardor		32		Lite Coverage
+Ark		33		Lite Coverage
+Astar		34		Lite Coverage
+Band		35		Lite Coverage
+Binance Native	36		Lite Coverage
+Celo		37		Lite Coverage
+Chiliz		38		Lite Coverage
+Nervos		39		Lite Coverage
+Cronos Native	40		Lite Coverage
+Digibyte	41		Lite Coverage
+Multiversx	42		Lite Coverage
+Enjin		43		Lite Coverage
+Eos		44		Lite Coverage
+Ethereum Pow	45		Lite Coverage
+Fetch AI	46		Lite Coverage
+Filecoin	47		Lite Coverage
+Flow		48		Lite Coverage
+Flare		49		Lite Coverage
+Moonbeam	50		Lite Coverage
+Helium		51		Lite Coverage
+ICP		52		Full Coverage
+Icon		53		Lite Coverage
+Injective	54		Lite Coverage
+IOTA		55		Lite Coverage
+IoTex		56		Lite Coverage
+Iris		57		Lite Coverage
+Kava		58		Lite Coverage
+Kadena		59		Lite Coverage
+Klaytn		60		Lite Coverage
+Komodo		61		Lite Coverage
+Kusama		62		Lite Coverage
+Lisk		63		Lite Coverage
+Terra		64		Lite Coverage
+Mina		65		Lite Coverage
+Moonriver	66		Lite Coverage
+Nano		67		Lite Coverage
+Near		68		Lite Coverage
+Neo3		69		Lite Coverage
+Oasys		70		Lite Coverage
+One		71		Lite Coverage
+Ontology	72		Lite Coverage
+Osmosis		73		Lite Coverage
+Polymesh	74		Lite Coverage
+QTUM		75		Lite Coverage
+Oasis		76		Lite Coverage
+Thorchain	77		Lite Coverage
+Ravencoin	78		Lite Coverage
+Siacoin		79		Lite Coverage
+Shiden		80		Lite Coverage
+Songbird	81		Lite Coverage
+Stratis		82		Lite Coverage
+Stacks		83		Lite Coverage
+SUI		84		Full Coverage
+zkSync		85		Lite Coverage
+Theta		86		Lite Coverage
+Tomo		87		Lite Coverage
+VeChain		88		Lite Coverage
+Waves		89		Lite Coverage
+Wax		90		Lite Coverage
+WEMIX		91		Lite Coverage
+WaltonChain	92		Lite Coverage
+Chia		93		Lite Coverage
+Tezos		94		Lite Coverage
+Zcoin		95		Lite Coverage
+Celestia	96		Lite Coverage
+Neutron		97		Lite Coverage
+Avalanche-P	98		Lite Coverage
+Sei		99		Lite Coverage
+Avalanche-X	100		Lite Coverage
+Aztec		101		Lite Coverage
+Bittensor	102		Lite Coverage
+Casper		103		Lite Coverage
+Deso		104		Lite Coverage
+Juno		105		Lite Coverage
+Pocket Network	106		Lite Coverage
+Ronin		107		Lite Coverage
+Vara		108		Lite Coverage
+XPLA		109		Lite Coverage
+Archway		110		Lite Coverage
+Axelar		111		Lite Coverage
+Dymension	112		Lite Coverage
+Starknet	113		Lite Coverage
+Orai		114		Lite Coverage
+Lukso		115		Lite Coverage
+bitsCrunch	116		Lite Coverage
+Reef		117		Lite Coverage
+Immutable zkEVM	118		Lite Coverage
+Base Protocol	119		Lite Coverage
+Arbitrum Nova	120		Lite Coverage
+Canto		121		Lite Coverage
+MetisDAO	122		Lite Coverage
+Aptos		123		Lite Coverage
