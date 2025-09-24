@@ -12,8 +12,8 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
  
-const apiKey = process.env.FIREBLOCKS_API_KEY || "d8d4ced2-5428-43af-80f8-52d8ffae7acd";
-const secretKeyPath = process.env.FIREBLOCKS_SECRET_KEY_PATH || "./fireblocks_secret.key";
+const apiKey = process.env.FIREBLOCKS_API_KEY;
+const secretKeyPath = process.env.FIREBLOCKS_SECRET_KEY_PATH;
 const baseUrl = process.env.FIREBLOCKS_ENV === "production" 
   ? "https://api.fireblocks.io" 
   : "https://sandbox-api.fireblocks.io";

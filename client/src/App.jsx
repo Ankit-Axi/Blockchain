@@ -289,29 +289,29 @@ const FireblocksApp = () => {
     fetchTransactions();
   }, []);
 
-   const callData = async()=>{
-      const response = await axios.post(
-      "https://api.merklescience.com/v3/addresses/monitor",
-      {
-        address: "0x3c905aC275240085FD295E8c493BF9A8aFE4cE75",
-        blockchain: "ETH",
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "R4MOPP0WOWEDH8F593E63OBQ6Z94YD9JNE1GW6CYE",
-        },
-      }
-    );
+  //  const callData = async()=>{
+  //     const response = await axios.post(
+  //     "https://api.merklescience.com/v3/addresses/monitor",
+  //     {
+  //       address: "0x3c905aC275240085FD295E8c493BF9A8aFE4cE75",
+  //       blockchain: "ETH",
+  //     },
+  //     {
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "x-api-key": "R4MOPP0WOWEDH8F593E63OBQ6Z94YD9JNE1GW6CYE",
+  //       },
+  //     }
+  //   );
 
-    const data = response.data;
-    console.log(data,"data")
-    }
+  //   const data = response.data;
+  //   console.log(data,"data")
+  //   }
 
-  useEffect(()=>{
+  // useEffect(()=>{
    
-    callData()
-  })
+  //   callData()
+  // })
 
   const StatCard = ({
     title,
@@ -759,7 +759,7 @@ const FireblocksApp = () => {
                   >
                     <MenuItem value="ETH_TEST5">Ethereum (Testnet)</MenuItem>
                     <MenuItem value="BTC_TEST">Bitcoin (Testnet)</MenuItem>
-                    <MenuItem value="USDC_TEST">USDC (Testnet)</MenuItem>
+                    <MenuItem value="USDC_ETH_TEST5_AN74">USDC (Testnet)</MenuItem>
                     <MenuItem value="LTC_TEST">Litecoin (Testnet)</MenuItem>
                   </Select>
                 </FormControl>

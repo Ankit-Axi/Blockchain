@@ -22,6 +22,7 @@ const basePath =
   process.env.FIREBLOCKS_ENV === "production"
     ? BasePath.Production
     : BasePath.Sandbox;
+console.log(apiKey,secretKeyPath);
 
 let fireblocks;
 
