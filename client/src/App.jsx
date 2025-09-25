@@ -39,6 +39,16 @@ import {
   Radio,
   Tooltip,
   Fade,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
 } from "@mui/material";
 import {
   AccountBalanceWallet,
@@ -55,6 +65,8 @@ import {
   Warning,
   AttachMoney,
   LocalAtm,
+  LocalGasStation,
+  Close,
 } from "@mui/icons-material";
 import axios from "axios"
 
@@ -147,7 +159,40 @@ const FireblocksApp = () => {
     destinationVaultId: "",
     note: "",
   });
+  const [estimatingFee, setEstimatingFee] = useState(false);
+  const [feeEstimation, setFeeEstimation] = useState(null);
+  const [showFeeModal, setShowFeeModal] = useState(false);
 
+  const estimateGasFee = async () => {
+    try {
+      setEstimatingFee(true);
+      const feeData = await apiCall("/transactions/estimate-fee", {
+        method: "POST",
+        body: JSON.stringify(transactionForm),
+      });
+
+
+      setFeeEstimation(feeData.data);
+      setShowFeeModal(true);
+    } catch (err) {
+      showSnackbar(err.message, "error");
+    } finally {
+      setEstimatingFee(false);
+    }
+  };
+  const handleCloseModal = () => {
+    setShowFeeModal(false);
+    setFeeEstimation(null);
+  };
+  const formatFeeDisplay = (fee, asset = "ETH") => {
+    if (!fee) return "0";
+    const numFee = parseFloat(fee);
+    if (numFee === 0) return "0";
+    if (numFee < 0.000001) {
+      return `${numFee.toExponential(3)} ${asset}`;
+    }
+    return `${numFee.toFixed(8)} ${asset}`;
+  };
   const showSnackbar = (message, severity = "success") => {
     setSnackbar({ open: true, message, severity });
   };
@@ -177,6 +222,8 @@ const FireblocksApp = () => {
     try {
       setLoading(true);
       const data = await apiCall("/vault/accounts");
+      console.log({data});
+      
       setVaultAccounts(data.data.accounts || []);
     } catch (err) {
       showSnackbar(err.message, "error");
@@ -309,7 +356,7 @@ const FireblocksApp = () => {
   //   }
 
   // useEffect(()=>{
-   
+
   //   callData()
   // })
 
@@ -730,6 +777,7 @@ const FireblocksApp = () => {
   );
 
   const renderTransactions = () => (
+
     <Grid container spacing={3}>
       {/* Create Transaction */}
       <Grid item xs={12}>
@@ -890,7 +938,7 @@ const FireblocksApp = () => {
             <Button
               variant="contained"
               startIcon={loading ? <CircularProgress size={20} /> : <Send />}
-              onClick={createTransaction}
+              onClick={estimateGasFee}
               disabled={loading}
               size="large"
             >
@@ -899,7 +947,219 @@ const FireblocksApp = () => {
           </CardActions>
         </Card>
       </Grid>
+      <Dialog
+        open={showFeeModal}
+        onClose={handleCloseModal}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          pb: 1
+        }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <LocalGasStation color="primary" />
+            <Typography variant="h6">Transaction Fee Estimation</Typography>
+          </Box>
+          <IconButton onClick={handleCloseModal} size="small">
+            <Close />
+          </IconButton>
+        </DialogTitle>
 
+        <DialogContent sx={{ pb: 2 }}>
+          {estimatingFee ? (
+            <Box display="flex" justifyContent="center" alignItems="center" py={6}>
+              <CircularProgress size={40} />
+              <Typography variant="body1" sx={{ ml: 2 }}>
+                Estimating gas fees...
+              </Typography>
+            </Box>
+          ) : feeEstimation ? (
+            <>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <AlertTitle>Review Transaction Details</AlertTitle>
+                Please review the transaction details and estimated fees before confirming.
+              </Alert>
+
+              {/* Transaction Summary */}
+              <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: "grey.50" }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                  Transaction Summary
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Asset:
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {transactionForm.assetId}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Amount:
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {transactionForm.amount} {transactionForm.assetId}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      From Vault:
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      ID {transactionForm.sourceVaultId}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      To:
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {transactionForm.destinationType === "address"
+                        ? `${transactionForm.destinationAddress.substring(0, 12)}...`
+                        : `Vault ID ${transactionForm.destinationVaultId}`}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Fee Estimation Table */}
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                Estimated Network Fees
+              </Typography>
+
+              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: "primary.main" }}>
+                      <TableCell sx={{ color: "white", fontWeight: 600 }}>
+                        Priority Level
+                      </TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: 600 }}>
+                        Estimated Fee
+                      </TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: 600 }}>
+                        Processing Time
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {feeEstimation.low && (
+                      <TableRow>
+                        <TableCell>
+                          <Chip
+                            label="Low Priority"
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: "monospace" }}>
+                          {formatFeeDisplay(
+                            feeEstimation.low.networkFee
+                          )}
+                        </TableCell>
+                        <TableCell>~15-30 minutes</TableCell>
+                      </TableRow>
+                    )}
+                    {feeEstimation.medium && (
+                      <TableRow sx={{ bgcolor: "warning.light", color: "warning.contrastText" }}>
+                        <TableCell>
+                          <Chip
+                            label="Medium Priority"
+                            size="small"
+                            color="warning"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: "monospace", fontWeight: 600 }}>
+                          {formatFeeDisplay(
+                            feeEstimation.medium.networkFee
+                          )}
+                        </TableCell>
+                        <TableCell>~5-15 minutes</TableCell>
+                      </TableRow>
+                    )}
+                    {feeEstimation.high && (
+                      <TableRow>
+                        <TableCell>
+                          <Chip
+                            label="High Priority"
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: "monospace" }}>
+                          {formatFeeDisplay(
+                            feeEstimation.high.networkFee
+                          )}
+                        </TableCell>
+                        <TableCell>~1-5 minutes</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Additional Fee Information */}
+              {(feeEstimation.gasLimit || feeEstimation.baseFee) && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: "grey.50", borderRadius: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                    Additional Information:
+                  </Typography>
+                  {feeEstimation.gasLimit && (
+                    <Typography variant="body2" color="text.secondary">
+                      • Gas Limit: {feeEstimation.gasLimit.toLocaleString()}
+                    </Typography>
+                  )}
+                  {feeEstimation.baseFee && (
+                    <Typography variant="body2" color="text.secondary">
+                      • Base Fee: {formatFeeDisplay(feeEstimation.baseFee, feeEstimation.baseAsset || "ETH")}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <AlertTitle>Important Notice</AlertTitle>
+                Network fees are estimates and may vary. The transaction will use medium priority by default.
+              </Alert>
+            </>
+          ) : (
+            <Box textAlign="center" py={4}>
+              <Warning sx={{ fontSize: 48, color: "warning.main", mb: 2 }} />
+              <Typography variant="body1">
+                Unable to estimate fees. Please try again.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            onClick={handleCloseModal}
+            color="inherit"
+            size="large"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={createTransaction}
+            disabled={!feeEstimation || loading || estimatingFee}
+            startIcon={loading ? <CircularProgress size={20} /> : <Send />}
+            size="large"
+          >
+            Confirm & Send Transaction
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Transactions List */}
       <Grid item xs={12}>
         <Card>
@@ -984,10 +1244,10 @@ const FireblocksApp = () => {
                             tx.status === "COMPLETED"
                               ? "success"
                               : tx.status === "PENDING"
-                              ? "warning"
-                              : tx.status === "FAILED"
-                              ? "error"
-                              : "default"
+                                ? "warning"
+                                : tx.status === "FAILED"
+                                  ? "error"
+                                  : "default"
                           }
                           sx={{ mt: 0.5 }}
                         />
