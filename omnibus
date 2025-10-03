@@ -1,0 +1,60 @@
+Deposit Flow with Omnibus Vault and Risk Scoring
+This document explains how deposits are handled in an Omnibus Vault model with risk scoring for compliance.
+
+1. Setup
+Omnibus Vault Accounts
+USDT Omnibus Vault: vault_omnibus_usdt
+ETH Omnibus Vault: vault_omnibus_eth
+Risk-Based Vault Accounts
+Deposit Vault (GREEN): vault_deposit
+Review Vault (ORANGE): vault_review
+Quarantine Vault (RED): vault_quarantine
+Users
+User A (Rahul) → assigned deposit address: 0xUserA123...
+User B (Sneha) → assigned deposit address: 0xUserB456...
+
+
+2. Deposit Examples
+
+Example 1: User A deposits 10 USDT
+Rahul sends 10 USDT to his assigned deposit address:
+From: 0xRahulWallet111...
+To: 0xUserA123...
+Fireblocks maps this to USDT Omnibus Vault (vault_omnibus_usdt).
+System runs risk check on the deposit transaction:
+Inputs: Txn hash, sender = 0xRahulWallet111..., token = USDT, amount = 10.
+Risk Score = 15 (GREEN).
+Action: Funds are transferred from vault_omnibus_usdt → vault_deposit.
+Backend credits 10 USDT to Rahul’s balance in your system.
+
+Example 2: User B deposits 0.5 ETH
+Sneha sends 0.5 ETH to her assigned deposit address:
+From: 0xSnehaWallet222...
+To: 0xUserB456...
+Fireblocks maps this to ETH Omnibus Vault (vault_omnibus_eth).
+System runs risk check on the deposit transaction:
+Inputs: Txn hash, sender = 0xSnehaWallet222..., token = ETH, amount = 0.5.
+Risk Score = 55 (ORANGE).
+Action: Funds are transferred from vault_omnibus_eth → vault_review.
+Backend shows deposit as PENDING REVIEW until compliance team approves.
+Example 3: User A deposits 5 USDT from a risky wallet
+Rahul sends 5 USDT from a flagged address:
+From: 0xBadWallet333...
+To: 0xUserA123...
+Fireblocks maps this to USDT Omnibus Vault.
+System runs risk check:
+Sender = 0xBadWallet333..., Risk Score = 90 (RED).
+Action: Funds are transferred from vault_omnibus_usdt → vault_quarantine.
+Backend shows deposit as REJECTED and does not credit Rahul’s account.
+
+
+3. Summary of Flow
+User deposits into their unique address (mapped to omnibus vault).
+Deposit lands in the appropriate Omnibus Vault.
+Run risk scoring API (e.g., Merkle Science).
+Move funds from Omnibus Vault → proper vault:
+GREEN → Deposit Vault → User credited.
+ORANGE → Review Vault → Pending compliance.
+RED → Quarantine Vault → Rejected.
+This way, you don’t need 3 vaults per user.
+Instead, you manage compliance centrally with just one omnibus vault per asset and a few risk-based vaults.

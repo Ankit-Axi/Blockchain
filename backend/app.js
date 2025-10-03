@@ -160,6 +160,97 @@ app.post("/vault/:vaultAccountId/wallet", async (req, res) => {
     });
   }
 });
+
+app.post("/vault/omnibus/create", async (req, res) => {
+  try {
+    const { vaultAccountId, assetId } = req.body;
+ 
+    if (!vaultAccountId) {
+      return res.status(400).json({ error: "vaultAccountId is required" });
+    }
+ 
+    if (!assetId) {
+      return res.status(400).json({ error: "assetId is required (e.g., ETH, BTC, USDT_ERC20)" });
+    }
+ 
+    const data = await makeFireblocksRequest(
+      "POST", 
+      `/v1/vault/accounts/${vaultAccountId}/${assetId}/addresses`,
+      {}
+    );
+    console.log({data});
+    
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error("Error creating omnibus address:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to create omnibus address",
+    });
+  }
+});
+
+// Get vault account details (useful to verify omnibus addresses)
+app.get("/vault/:vaultAccountId", async (req, res) => {
+  try {
+    const { vaultAccountId } = req.params;
+ console.log({vaultAccountId});
+ 
+    if (!vaultAccountId) {
+      return res.status(400).json({ error: "vaultAccountId is required" });
+    }
+ 
+    const data = await makeFireblocksRequest(
+      "GET", 
+      `/v1/vault/accounts/${vaultAccountId}`
+    );
+ 
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error("Error fetching vault account:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to fetch vault account",
+    });
+  }
+});
+
+// Get addresses for a specific asset in a vault account
+app.get("/vault/:vaultAccountId/:assetId/addresses", async (req, res) => {
+  try {
+    const { vaultAccountId, assetId } = req.params;
+ 
+    if (!vaultAccountId) {
+      return res.status(400).json({ error: "vaultAccountId is required" });
+    }
+ 
+    if (!assetId) {
+      return res.status(400).json({ error: "assetId is required" });
+    }
+ 
+    const data = await makeFireblocksRequest(
+      "GET", 
+      `/v1/vault/accounts/${vaultAccountId}/${assetId}/addresses`
+    );
+ 
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error("Error fetching addresses:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to fetch addresses",
+    });
+  }
+});
  
 app.get("/vault/:vaultAccountId/assets", async (req, res) => {
   try {

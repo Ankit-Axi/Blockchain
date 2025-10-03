@@ -283,6 +283,30 @@ const FireblocksApp = () => {
     } finally {
       setLoading(false);
     }
+  }; 
+
+  const createOmnibusUserWallet = async () => {
+    if (!walletForm.vaultAccountId) {
+      showSnackbar("Please select a vault account", "warning");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await apiCall(`/vault/omnibus/create`, {
+        method: "POST",
+        body: JSON.stringify({vaultAccountId: walletForm.vaultAccountId, assetId: walletForm.assetId }),
+      });
+      console.log({data});
+      
+      showSnackbar("OmniBus user wallet created successfully!");
+      setWalletForm({ vaultAccountId: "", assetId: "BTC_TEST" });
+      fetchVaultAccounts();
+    } catch (err) {
+      showSnackbar(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const createTransaction = async () => {
@@ -615,6 +639,68 @@ const FireblocksApp = () => {
               disabled={loading}
             >
               Create Wallet
+            </Button>
+          </CardActions>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} lg={6}>
+        <Card>
+          <CardContent>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
+              <LocalAtm />
+              Create user Account
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Vault Account</InputLabel>
+                <Select
+                  value={walletForm.vaultAccountId}
+                  label="Vault Account"
+                  onChange={(e) =>
+                    setWalletForm({
+                      ...walletForm,
+                      vaultAccountId: e.target.value,
+                    })
+                  }
+                >
+                  {vaultAccounts.map((vault) => (
+                    <MenuItem key={vault.id} value={vault.id}>
+                      {vault.name} (ID: {vault.id})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel>Asset</InputLabel>
+                <Select
+                  value={walletForm.assetId}
+                  label="Asset"
+                  onChange={(e) =>
+                    setWalletForm({ ...walletForm, assetId: e.target.value })
+                  }
+                >
+                  <MenuItem value="BTC_TEST">Bitcoin (Testnet)</MenuItem>
+                  <MenuItem value="ETH_TEST5">Ethereum (Testnet)</MenuItem>
+                  <MenuItem value="USDC_ETH_TEST5_AN74">USDC (Testnet)</MenuItem>
+                  <MenuItem value="LTC_TEST">Litecoin (Testnet)</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </CardContent>
+          <CardActions sx={{ px: 2, pb: 2 }}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={loading ? <CircularProgress size={20} /> : <Add />}
+              onClick={createOmnibusUserWallet}
+              disabled={loading}
+            >
+              Create user Wallet
             </Button>
           </CardActions>
         </Card>
